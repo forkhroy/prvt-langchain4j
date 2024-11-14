@@ -16,17 +16,23 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.slf4j.LoggerFactory;
 
+import io.github.cdimascio.dotenv.Dotenv;
+import io.github.cdimascio.dotenv.DotenvException;
+
 public class OracleEmbeddingModelTest {
 
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(OracleEmbeddingModelTest.class);
 
+    Dotenv dotenv;
     Connection conn;
 
     @BeforeEach
     void setUp() {
+        dotenv = Dotenv.configure().load();
+
         try {
             conn = DriverManager.getConnection(
-                    "jdbc:oracle:thin:@phoenix91729.dev3sub2phx.databasede3phx.oraclevcn.com:1521:rachain", "scott", "tiger");
+                    dotenv.get("ORACLE_JDBC_URL"), dotenv.get("ORACLE_JDBC_USER"), dotenv.get("ORACLE_JDBC_PASSWORD"));
         } catch (SQLException ex) {
             String message = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
             log.error(message);
@@ -36,11 +42,11 @@ public class OracleEmbeddingModelTest {
     @Test
     @DisplayName("embed with provider=database")
     void testEmbedONNX() {
-        String pref = "{\"provider\": \"database\", \"model\": \"scott.database\"}";
+        String pref = "{\"provider\": \"database\", \"model\": \"" + dotenv.get("DEMO_ONNX_MODEL") + "\"}";
 
         OracleEmbeddingModel embedder = new OracleEmbeddingModel(conn, pref);
 
-        boolean result = embedder.loadOnnxModel(conn, "MODEL_DIR", "ALL-MINILM-L6-V2.onnx", "database");
+        boolean result = OracleEmbeddingModel.loadOnnxModel(conn, dotenv.get("DEMO_ONNX_DIR"), dotenv.get("DEMO_ONNX_FILE"), dotenv.get("DEMO_ONNX_MODEL"));
         assertThat(result).isEqualTo(true);
 
         Response<Embedding> resp = embedder.embed("hello world");
@@ -67,7 +73,7 @@ public class OracleEmbeddingModelTest {
                 + "  \"url\": \"https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/20231130/actions/embedText\",\n"
                 + "  \"model\": \"cohere.embed-english-light-v3.0\"\n"
                 + "}";
-        String proxy = "www-proxy-ash7.us.oracle.com:80";
+        String proxy = dotenv.get("DEMO_PROXY");
 
         OracleEmbeddingModel embedder = new OracleEmbeddingModel(conn, pref, proxy);
 
@@ -85,5 +91,4 @@ public class OracleEmbeddingModelTest {
         Response<List<Embedding>> resp3 = embedder.embedAll(textSegments);
         assertThat(resp3.content().size()).isEqualTo(3);
     }
-
 }

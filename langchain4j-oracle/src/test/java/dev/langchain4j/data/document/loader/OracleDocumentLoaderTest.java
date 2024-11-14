@@ -14,17 +14,23 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.slf4j.LoggerFactory;
 
+import io.github.cdimascio.dotenv.Dotenv;
+import io.github.cdimascio.dotenv.DotenvException;
+
 public class OracleDocumentLoaderTest {
 
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(OracleDocumentLoaderTest.class);
 
+    Dotenv dotenv;
     OracleDocumentLoader loader;
 
     @BeforeEach
     void setUp() {
+        dotenv = Dotenv.configure().load();
+
         try {
             Connection conn = DriverManager.getConnection(
-                    "jdbc:oracle:thin:@phoenix91729.dev3sub2phx.databasede3phx.oraclevcn.com:1521:rachain", "scott", "tiger");
+                    dotenv.get("ORACLE_JDBC_URL"), dotenv.get("ORACLE_JDBC_USER"), dotenv.get("ORACLE_JDBC_PASSWORD"));
             loader = new OracleDocumentLoader(conn);
         } catch (SQLException ex) {
             String message = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
@@ -35,7 +41,7 @@ public class OracleDocumentLoaderTest {
     @Test
     @DisplayName("load from file")
     void testFile() {
-        String pref = "{\"file\": \"D:/work/ddjiang/GitHub/langchain_demo/langchainjs/data/sample-1.pdf\"}";
+        String pref = "{\"file\": \"" + dotenv.get("DEMO_DS_PDF_FILE") + "\"}";
         List<Document> docs = loader.loadDocuments(pref);
         assertThat(docs.size()).isEqualTo(1);
         for (Document doc : docs) {
@@ -46,23 +52,23 @@ public class OracleDocumentLoaderTest {
     @Test
     @DisplayName("load from dir")
     void testDir() {
-        String pref = "{\"dir\": \"D:/work/ddjiang/GitHub/langchain_demo/langchainjs/data\"}";
+        String pref = "{\"dir\": \"" + dotenv.get("DEMO_DS_DIR") + "\"}";
         List<Document> docs = loader.loadDocuments(pref);
         assertThat(docs.size()).isGreaterThan(1);
         for (Document doc : docs) {
             assertThat(doc.text().length()).isGreaterThan(0);
         }
     }
-    
+
     @Test
     @DisplayName("load from table")
     void testTable() {
-        String pref = "{\"owner\": \"scott\", \"tablename\": \"docs\", \"colname\": \"text\"}";
+        String pref = "{\"owner\": \"" + dotenv.get("DEMO_DS_OWNER") + "\", \"tablename\": \"" + dotenv.get("DEMO_DS_TABLE") + "\", \"colname\": \"" + dotenv.get("DEMO_DS_COLUMN") + "\"}";
         List<Document> docs = loader.loadDocuments(pref);
         assertThat(docs.size()).isGreaterThan(1);
         for (Document doc : docs) {
             assertThat(doc.text().length()).isGreaterThan(0);
         }
     }
-    
+
 }

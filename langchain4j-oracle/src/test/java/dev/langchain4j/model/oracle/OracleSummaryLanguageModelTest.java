@@ -16,17 +16,23 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.cdimascio.dotenv.Dotenv;
+import io.github.cdimascio.dotenv.DotenvException;
+
 public class OracleSummaryLanguageModelTest {
 
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(OracleSummaryLanguageModelTest.class);
 
+    Dotenv dotenv;
     Connection conn;
 
     @BeforeEach
     void setUp() {
+        dotenv = Dotenv.configure().load();
+
         try {
             conn = DriverManager.getConnection(
-                    "jdbc:oracle:thin:@phoenix91729.dev3sub2phx.databasede3phx.oraclevcn.com:1521:rachain", "scott", "tiger");
+                    dotenv.get("ORACLE_JDBC_URL"), dotenv.get("ORACLE_JDBC_USER"), dotenv.get("ORACLE_JDBC_PASSWORD"));
         } catch (SQLException ex) {
             String message = ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage();
             log.error(message);
@@ -41,7 +47,7 @@ public class OracleSummaryLanguageModelTest {
 
             OracleSummaryLanguageModel model = new OracleSummaryLanguageModel(conn, pref);
 
-            String filename = "D:\\work\\ddjiang\\GitHub\\langchain_demo\\langchainjs\\data\\sample-3.txt";
+            String filename = dotenv.get("DEMO_DS_TEXT_FILE");
             String content = readFile(filename, Charset.forName("UTF-8"));
             Response<String> resp = model.generate(content);
             assertThat(resp.content().length()).isGreaterThan(0);
@@ -58,14 +64,14 @@ public class OracleSummaryLanguageModelTest {
             String pref = "{\n"
                     + "  \"provider\": \"ocigenai\",\n"
                     + "  \"credential_name\": \"OCI_CRED\",\n"
-                    + "  \"url\": \"https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/20231130/actions/summarizeText\",\n"
-                    + "  \"model\": \"cohere.command\",\n"
+                    + "  \"url\": \"https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/20231130/actions/chat\",\n"
+                    + "  \"model\": \"cohere.command-r-16k\",\n"
                     + "}";
-            String proxy = "www-proxy-ash7.us.oracle.com:80";
+            String proxy = dotenv.get("DEMO_PROXY");
 
             OracleSummaryLanguageModel model = new OracleSummaryLanguageModel(conn, pref, proxy);
 
-            String filename = "D:\\work\\ddjiang\\GitHub\\langchain_demo\\langchainjs\\data\\sample-3.txt";
+            String filename = dotenv.get("DEMO_DS_TEXT_FILE");
             String content = readFile(filename, Charset.forName("UTF-8"));
             Response<String> resp = model.generate(content);
             assertThat(resp.content().length()).isGreaterThan(0);
